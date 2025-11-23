@@ -1,0 +1,29 @@
+[Unit]
+Description=Hubitat Go MCP Server
+After=network.target
+Documentation=https://github.com/alexj212/hubitat-go-mcp
+
+[Service]
+Type=simple
+User=alexj
+Group=alexj
+WorkingDirectory=/docker/hubitat-go-mcp
+ExecStart=/usr/local/bin/hubitat-go-mcp
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hubitat-go-mcp
+
+# Environment file
+EnvironmentFile=/docker/hubitat-go-mcp/.env
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/docker/hubitat-go-mcp
+
+[Install]
+WantedBy=multi-user.target
