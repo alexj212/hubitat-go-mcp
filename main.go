@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -122,7 +121,6 @@ func setupMCPServer() *server.MCPServer {
 	s := server.NewMCPServer(
 		serverName,
 		serverVersion,
-		server.WithToolCapabilities(true),
 	)
 
 	// Tool: List all devices
@@ -130,7 +128,7 @@ func setupMCPServer() *server.MCPServer {
 		mcp.WithDescription("List all Hubitat devices with their capabilities and current states"),
 	)
 
-	s.AddTool(listDevicesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.AddTool(listDevicesTool, func(arguments map[string]interface{}) (*mcp.CallToolResult, error) {
 		devices, err := getDevices()
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -157,8 +155,8 @@ func setupMCPServer() *server.MCPServer {
 		),
 	)
 
-	s.AddTool(getDeviceTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		deviceID, ok := request.Params.Arguments["device_id"].(string)
+	s.AddTool(getDeviceTool, func(arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		deviceID, ok := arguments["device_id"].(string)
 		if !ok {
 			return mcp.NewToolResultError("device_id must be a string"), nil
 		}
@@ -190,8 +188,8 @@ func setupMCPServer() *server.MCPServer {
 		),
 	)
 
-	s.AddTool(turnOnTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		deviceID, ok := request.Params.Arguments["device_id"].(string)
+	s.AddTool(turnOnTool, func(arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		deviceID, ok := arguments["device_id"].(string)
 		if !ok {
 			return mcp.NewToolResultError("device_id must be a string"), nil
 		}
@@ -212,8 +210,8 @@ func setupMCPServer() *server.MCPServer {
 		),
 	)
 
-	s.AddTool(turnOffTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		deviceID, ok := request.Params.Arguments["device_id"].(string)
+	s.AddTool(turnOffTool, func(arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		deviceID, ok := arguments["device_id"].(string)
 		if !ok {
 			return mcp.NewToolResultError("device_id must be a string"), nil
 		}
@@ -238,13 +236,13 @@ func setupMCPServer() *server.MCPServer {
 		),
 	)
 
-	s.AddTool(setLevelTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		deviceID, ok := request.Params.Arguments["device_id"].(string)
+	s.AddTool(setLevelTool, func(arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		deviceID, ok := arguments["device_id"].(string)
 		if !ok {
 			return mcp.NewToolResultError("device_id must be a string"), nil
 		}
 
-		level, ok := request.Params.Arguments["level"].(float64)
+		level, ok := arguments["level"].(float64)
 		if !ok {
 			return mcp.NewToolResultError("level must be a number"), nil
 		}
@@ -277,18 +275,18 @@ func setupMCPServer() *server.MCPServer {
 		),
 	)
 
-	s.AddTool(customCommandTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		deviceID, ok := request.Params.Arguments["device_id"].(string)
+	s.AddTool(customCommandTool, func(arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		deviceID, ok := arguments["device_id"].(string)
 		if !ok {
 			return mcp.NewToolResultError("device_id must be a string"), nil
 		}
 
-		command, ok := request.Params.Arguments["command"].(string)
+		command, ok := arguments["command"].(string)
 		if !ok {
 			return mcp.NewToolResultError("command must be a string"), nil
 		}
 
-		value, hasValue := request.Params.Arguments["value"].(string)
+		value, hasValue := arguments["value"].(string)
 
 		var err error
 		if hasValue && value != "" {
@@ -318,7 +316,7 @@ func main() {
 
 	mcpServer := setupMCPServer()
 
-	if err := mcpServer.ServeStdio(); err != nil {
+	if err := server.ServeStdio(mcpServer); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 }
