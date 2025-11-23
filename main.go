@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -18,6 +19,13 @@ import (
 const (
 	serverName    = "hubitat-mcp"
 	serverVersion = "1.0.0"
+)
+
+var (
+	modeFlag    = flag.String("mode", "stdio", "Server mode: 'stdio' for MCP stdio transport, 'sse' for HTTP/SSE server")
+	portFlag    = flag.String("port", "", "Port for SSE server mode (overrides .env PORT)")
+	versionFlag = flag.Bool("version", false, "Print version and exit")
+	helpFlag    = flag.Bool("help", false, "Show help message")
 )
 
 type HubitatDevice struct {
@@ -305,18 +313,75 @@ func setupMCPServer() *server.MCPServer {
 	return s
 }
 
+func printHelp() {
+	fmt.Printf("Hubitat Go MCP Server v%s\n", serverVersion)
+	fmt.Println("\nUsage:")
+	fmt.Printf("  %s [options]\n\n", os.Args[0])
+	fmt.Println("Options:")
+	flag.PrintDefaults()
+	fmt.Println("\nModes:")
+	fmt.Println("  stdio - MCP stdio transport (default, for Claude Desktop)")
+	fmt.Println("  sse   - HTTP/SSE server (for remote connections)")
+	fmt.Println("\nExamples:")
+	fmt.Printf("  %s                           # Run in stdio mode (default)\n", os.Args[0])
+	fmt.Printf("  %s -mode=sse                 # Run as HTTP/SSE server\n", os.Args[0])
+	fmt.Printf("  %s -mode=sse -port=8080      # Run SSE server on port 8080\n", os.Args[0])
+	fmt.Println("\nEnvironment variables (from .env file):")
+	fmt.Println("  HUBITAT_BASE_URL - Hubitat Maker API base URL (required)")
+	fmt.Println("  HUBITAT_TOKEN    - Hubitat access token (required)")
+	fmt.Println("  PORT             - Default port for SSE mode (default: 5006)")
+}
+
 func main() {
+	flag.Parse()
+
+	if *helpFlag {
+		printHelp()
+		os.Exit(0)
+	}
+
+	if *versionFlag {
+		fmt.Printf("Hubitat Go MCP Server v%s\n", serverVersion)
+		os.Exit(0)
+	}
+
 	if err := loadConfig(); err != nil {
 		log.Fatalf("Configuration error: %v", err)
 	}
 
+	// Override port if specified via flag
+	if *portFlag != "" {
+		config.Port = *portFlag
+	}
+
 	log.Printf("Starting Hubitat MCP Server v%s", serverVersion)
 	log.Printf("Hubitat API: %s", config.BaseURL)
-	log.Printf("Listening on port: %s", config.Port)
+	log.Printf("Mode: %s", *modeFlag)
 
 	mcpServer := setupMCPServer()
 
-	if err := server.ServeStdio(mcpServer); err != nil {
-		log.Fatalf("Server error: %v", err)
+	switch *modeFlag {
+	case "stdio":
+		log.Println("Running in stdio mode (for Claude Desktop)")
+		if err := server.ServeStdio(mcpServer); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
+
+	case "sse":
+		log.Printf("Running in SSE mode on port %s", config.Port)
+		baseURL := fmt.Sprintf("http://localhost:%s", config.Port)
+		sseServer := server.NewSSEServer(mcpServer, baseURL)
+
+		addr := fmt.Sprintf(":%s", config.Port)
+		log.Printf("SSE server listening on %s", addr)
+		log.Printf("SSE endpoint: %s/sse", baseURL)
+		log.Printf("Status endpoint: %s/status", baseURL)
+
+		if err := sseServer.Start(addr); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
+
+	default:
+		log.Fatalf("Invalid mode: %s (must be 'stdio' or 'sse')", *modeFlag)
 	}
 }

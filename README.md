@@ -11,7 +11,9 @@ A native Go implementation of a Model Context Protocol (MCP) server for Hubitat 
 - ✅ **Native MCP Implementation** - Built with [mcp-go](https://github.com/mark3labs/mcp-go)
 - ✅ **Full Device Control** - Turn devices on/off, set levels, send custom commands
 - ✅ **Device Discovery** - List all devices with capabilities
-- ✅ **Systemd Integration** - Run as a system service
+- ✅ **Multiple Modes** - stdio (Claude Desktop) or SSE (HTTP server)
+- ✅ **Cross-Platform** - Linux, macOS, and Windows support
+- ✅ **Systemd Integration** - Run as a system service on Linux
 - ✅ **Environment Configuration** - Easy setup with .env files
 - ✅ **Production Ready** - Includes Makefile and systemd service
 
@@ -24,7 +26,31 @@ A native Go implementation of a Model Context Protocol (MCP) server for Hubitat 
 
 ## Installation
 
-### Quick Start
+### Windows
+
+See **[WINDOWS.md](WINDOWS.md)** for complete Windows installation guide.
+
+**Quick Start (Windows)**:
+```powershell
+git clone https://github.com/alexj212/hubitat-go-mcp.git
+cd hubitat-go-mcp
+.\install-windows.ps1
+```
+
+### Linux / macOS
+
+#### Quick Start (Automated)
+
+```bash
+# Clone the repository
+git clone https://github.com/alexj212/hubitat-go-mcp.git
+cd hubitat-go-mcp
+
+# Run installation script
+./install-claude-desktop.sh
+```
+
+#### Manual Installation
 
 ```bash
 # Clone the repository
@@ -40,10 +66,8 @@ nano .env
 # Build and install
 make install
 
-# Install as systemd service
+# Optional: Install as systemd service (Linux only)
 make install-service
-
-# Start the service
 sudo systemctl start hubitat-go-mcp
 ```
 
@@ -83,10 +107,46 @@ PORT=5006
 
 ## Claude Desktop Integration
 
+### Automatic Setup
+
+**Linux/macOS**:
+```bash
+./install-claude-desktop.sh
+```
+
+**Windows**:
+```powershell
+.\install-windows.ps1
+```
+
+### Manual Setup
+
 Add this to your Claude Desktop configuration file:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "hubitat": {
+      "command": "/usr/local/bin/hubitat-go-mcp"
+    }
+  }
+}
+```
+
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "hubitat": {
+      "command": "C:\\path\\to\\hubitat-go-mcp\\hubitat-go-mcp.exe"
+    }
+  }
+}
+```
+
 **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 ```json
@@ -100,6 +160,50 @@ Add this to your Claude Desktop configuration file:
 ```
 
 Then restart Claude Desktop.
+
+## Running Modes
+
+The server supports two modes of operation:
+
+### Mode 1: stdio (Default - for Claude Desktop)
+
+This is the default mode used by Claude Desktop for local MCP server integration:
+
+```bash
+./hubitat-go-mcp
+# or
+./hubitat-go-mcp -mode=stdio
+```
+
+Claude Desktop will launch this automatically via the config file.
+
+### Mode 2: SSE Server (for Remote Access)
+
+Run as an HTTP server with Server-Sent Events for remote access:
+
+```bash
+./hubitat-go-mcp -mode=sse
+# or specify a custom port
+./hubitat-go-mcp -mode=sse -port=8080
+```
+
+This creates an HTTP server at:
+- **SSE endpoint**: `http://localhost:5006/sse`
+- **Status endpoint**: `http://localhost:5006/status`
+
+You can then use tools like `mcp-proxy` or other MCP clients to connect remotely.
+
+### Command-Line Options
+
+```bash
+./hubitat-go-mcp -help
+```
+
+Available options:
+- `-mode=stdio|sse` - Server mode (default: stdio)
+- `-port=PORT` - Port for SSE mode (overrides .env)
+- `-version` - Print version and exit
+- `-help` - Show help message
 
 ## Available Tools
 
