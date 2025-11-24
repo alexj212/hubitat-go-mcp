@@ -8,7 +8,7 @@ Type=simple
 User=alexj
 Group=alexj
 WorkingDirectory=/docker/hubitat-go-mcp
-ExecStart=/usr/local/bin/hubitat-go-mcp -mode=sse
+ExecStart=/docker/hubitat-go-mcp/hubitat-go-mcp -mode=sse
 Restart=always
 RestartSec=10
 StandardOutput=journal
